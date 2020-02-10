@@ -30,6 +30,10 @@ parser.add_argument('--vwcw', type=float, default=2.25,
                     help='Valid word insertion weight. This is used to lessen the word insertion penalty when the inserted word is part of the vocabulary. Default: 2.25')
 parser.add_argument('--bw', type=int, default=1024,
                     help='Beam width used in the CTC decoder when building candidate transcriptions. Default: 1024')
+parser.add_argument('-la', '--lm_alpha', type=float, default=0.75,
+                        help=f"The alpha hyperparameter of the CTC decoder. Language Model weight. Default: 0.75")
+parser.add_argument('-lb', '--lm_beta', type=float, default=1.85,
+                        help=f"The beta hyperparameter of the CTC decoder. Word insertion bonus. Default: 1.85")
 parser.add_argument('-p', '--port', default=8080,
                     help='Port to run server on. Default: 8080')
 parser.add_argument('--debuglevel', default=20,
@@ -57,15 +61,11 @@ print('Initializing model...')
 logger.info("ARGS.model: %s", ARGS.model)
 logger.info("ARGS.alphabet: %s", ARGS.alphabet)
 
-model = deepspeech.Model(ARGS.model, N_FEATURES, N_CONTEXT, ARGS.alphabet, BEAM_WIDTH)
+model = deepspeech.Model(ARGS.model, BEAM_WIDTH)
 if ARGS.lm and ARGS.trie:
-    logger.info("ARGS.lm: %s", ARGS.lm)
-    logger.info("ARGS.trie: %s", ARGS.trie)
-    model.enableDecoderWithLM(ARGS.alphabet,
-                              ARGS.lm,
-                              ARGS.trie,
-                              LM_WEIGHT,
-                              VALID_WORD_COUNT_WEIGHT)
+        logging.info("ARGS.lm: %s", ARGS.lm)
+        logging.info("ARGS.trie: %s", ARGS.trie)
+        model.enableDecoderWithLM(ARGS.lm, ARGS.trie, ARGS.lm_alpha, ARGS.lm_beta)
 
 @get('/recognize', apply=[websocket])
 def recognize(ws):
@@ -82,7 +82,7 @@ def recognize(ws):
             if not start_time:
                 # Start of stream (utterance)
                 start_time = time()
-                sctx = model.setupStream()
+                sctx = model.createStream()
                 assert not gSem_acquired
                 # logger.debug("acquiring lock for deepspeech ...")
                 gSem.acquire(blocking=True)

@@ -95,7 +95,7 @@ class VADAudio(Audio):
 
     def vad_collector_simple(self, pre_padding_ms, blocks=None):
         if blocks is None: blocks = iter(self)
-        num_padding_blocks = padding_ms // self.block_duration_ms
+        num_padding_blocks = pre_padding_ms // self.block_duration_ms
         buff = collections.deque(maxlen=num_padding_blocks)
         triggered = False
 
@@ -139,7 +139,7 @@ class VADAudio(Audio):
                 num_voiced = len([f for f, speech in ring_buffer if speech])
                 if num_voiced > ratio * ring_buffer.maxlen:
                     triggered = True
-                    for f, s in ring_buffer:
+                    for f, _ in ring_buffer:
                         yield f
                     ring_buffer.clear()
 
